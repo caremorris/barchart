@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>bars</title>
+        <script type="text/javascript" src="d3/d3.js"></script>
+        <style>
+
+        body {
+            margin: auto;
+            width: 960px;
+        }
+
+        svg {
+            font: 10px sans-serif;
+        }
+
+        .axis path,         /* selects all path elements inside elements with class="axis" */
+        .axis line{
+            fill: none;
+            stroke: #000;
+            shape-rendering: crispEdges;
+        }
+
+        </style>
+    </head>
+    <body>
+        <script type="text/javascript">
+        var margin = {top: 30, right: 20, bottom: 30, left: 70},
+            width = 960 - margin.left - margin.right, // = 870
+            height = 500 - margin.top - margin.bottom; // = 440
+
+        var stack = d3.layout.stack();
+
+        var x = d3.time.scale()
+            .range([0, width]);
+
+        var xAxis = d3.svg.axis()
+            .scale(x)
+            .orient("bottom");
+
+        var y = d3.scale.linear()
+            .range([height, 0]);
+
+        var yAxis = d3.svg.axis()
+            .scale(y)
+            .orient("left");
+
+        var color = d3.scale.ordinal()
+            .domain([0 ,1])
+            .range(["rgb(240,240,240)", "rgb(47,79,79)"]);
+
+        var svg = d3.select("body")
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+          .append("g")
+            .attr("transform", "translate(" + margin.left + ", " + margin.top + ")");
+
+        svg.append("g")
+            .attr("class", "x axis")
+            .attr("transform", "translate(0, " + height + ")")
+            .call(xAxis);
+
+        svg.append("g")
+            .attr("class", "y axis")
+            .call(yAxis);
+
+        function renderBar(j) {
+            d3.csv("pump" + j.toString() + ".csv", function(error, data) {
+
+                x.domain(d3.extent(data, function(d) { return d.time; }));
+                y.domain(d3.extent(data, function(d) { return d.value; }));
+
+                svg.selectAll("rect.pump" + j.toString())
+                    .data(data)
+                  .enter().append("rect")
+                    .attr("class", "pump" + j.toString())
+                    .attr("x", function(d) { return x(d.time); })
+                    .attr("y", function(d, i) { return (height - 21*j) })
+                    .attr("width", 20)
+                    .attr("height", 20)
+                    .attr("fill", function(d) { return color(d.value) });
+            });            
+        }
+
+        for (var i=1; i<4; i++) {
+            renderBar(i);
+        }
+
+
+        </script>
+    </body>
+</html>
