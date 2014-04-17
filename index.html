@@ -25,69 +25,111 @@
         </style>
     </head>
     <body>
+
         <script type="text/javascript">
-        var margin = {top: 30, right: 20, bottom: 30, left: 70},
-            width = 960 - margin.left - margin.right, // = 870
-            height = 500 - margin.top - margin.bottom; // = 440
 
-        var stack = d3.layout.stack();
+            //Width and height
+            var w = 500;
+            var h = 300;
 
-        var x = d3.time.scale()
-            .range([0, width]);
+            var m = 1396984337000;
+            var k = 21600; 
 
-        var xAxis = d3.svg.axis()
-            .scale(x)
-            .orient("bottom");
+            //Original data
+            var dataset = [
+                [
+                // layer 1 ------- y0: 0                        = 0
+                    { x: 0, y: m + 0*k, z:1 }, // bar 1
+                    { x: 1, y: m + 0*k, z:0 }, // bar 2
+                    { x: 2, y: m + 0*k, z:1 }, // bar 3
+                    { x: 3, y: m + 0*k, z:1 }, // bar 4
+                    { x: 4, y: m + 0*k, z:0 }, // bar 5
+                    { x: 5, y: m + 0*k, z:0 }  // bar 6
+                ],
+                [
+                // layer 2 -------- y0: m+0*k                   = m
+                    { x: 0, y: m + 1*k, z:0 }, 
+                    { x: 1, y: m + 1*k, z:1 }, 
+                    { x: 2, y: m + 1*k, z:1 },
+                    { x: 3, y: m + 1*k, z:0 },
+                    { x: 4, y: m + 1*k, z:1 },
+                    { x: 5, y: m + 1*k, z:0 }  
+                ],
+                [
+                // layer 3 -------- y0: m+0*k + m+1*k           = 2m + k
+                    { x: 0, y: m + 2*k, z:1 }, 
+                    { x: 1, y: m + 2*k, z:0 }, 
+                    { x: 2, y: m + 2*k, z:0 }, 
+                    { x: 3, y: m + 2*k, z:1 },
+                    { x: 4, y: m + 2*k, z:1 },
+                    { x: 5, y: m + 2*k, z:0 }  
+                ],
+                [
+                // layer 4 -------- y0: m+0*k + m+1*k + m+2*k   = 3m + 3k 
+                    { x: 0, y: m + 3*k, z:1 }, 
+                    { x: 1, y: m + 3*k, z:0 }, 
+                    { x: 2, y: m + 3*k, z:1 }, 
+                    { x: 3, y: m + 3*k, z:1 },
+                    { x: 4, y: m + 3*k, z:0 },
+                    { x: 5, y: m + 3*k, z:1 }
+                ]
+            ];
 
-        var y = d3.scale.linear()
-            .range([height, 0]);
+            //Set up stack method
+            var stack = d3.layout.stack();
 
-        var yAxis = d3.svg.axis()
-            .scale(y)
-            .orient("left");
+            //Data, stacked
+            stack(dataset);
+            console.log(dataset);
 
-        var color = d3.scale.ordinal()
-            .domain([0 ,1])
-            .range(["rgb(240,240,240)", "rgb(47,79,79)"]);
+            // now we have y0
 
-        var svg = d3.select("body")
-            .append("svg")
-            .attr("width", width + margin.left + margin.right)
-            .attr("height", height + margin.top + margin.bottom)
-          .append("g")
-            .attr("transform", "translate(" + margin.left + ", " + margin.top + ")");
+            //Set up scales
+            var f = d3.time.scale()
+                .domain([m + 0*k, m + 3*k])
+                .range([0, w - w / dataset.length]); 
 
-        svg.append("g")
-            .attr("class", "x axis")
-            .attr("transform", "translate(0, " + height + ")")
-            .call(xAxis);
+            /*var yRange = [];
+            for (var i in d3.range(dataset[0].length)) {
+                i*=100;
+                yRange.push(i);
+            }*/
 
-        svg.append("g")
-            .attr("class", "y axis")
-            .call(yAxis);
-
-        function renderBar(j) {
-            d3.csv("pump" + j.toString() + ".csv", function(error, data) {
-
-                x.domain(d3.extent(data, function(d) { return d.time; }));
-                y.domain(d3.extent(data, function(d) { return d.value; }));
-
-                svg.selectAll("rect.pump" + j.toString())
-                    .data(data)
-                  .enter().append("rect")
-                    .attr("class", "pump" + j.toString())
-                    .attr("x", function(d) { return x(d.time); })
-                    .attr("y", function(d, i) { return (height - 21*j) })
-                    .attr("width", 20)
-                    .attr("height", 20)
-                    .attr("fill", function(d) { return color(d.value) });
-            });            
-        }
-
-        for (var i=1; i<4; i++) {
-            renderBar(i);
-        }
-
+            var g = d3.scale.linear()
+                .domain([0, dataset[0].length]) // [0, 4]
+                .range([0, h]); 
+                
+            //Custom colors
+            var colors = d3.scale.ordinal()
+                .domain([0, 1])
+                .range(["rgb(224, 224, 224)","rgb(0, 204, 102)"]);
+        
+            //Create SVG element
+            var svg = d3.select("body")
+                        .append("svg")
+                        .attr("width", w)
+                        .attr("height", h);
+    
+            // each group --> a layer
+            var groups = svg.selectAll("g")
+                .data(dataset)
+              .enter().append("g");
+    
+            // Add a rect for each data value
+            var rects = groups.selectAll("rect")
+                .data(function(d) { return d; })
+              .enter().append("rect")
+                .attr("x", function(d) {
+                    return f(d.y);
+                })
+                .attr("y", function(d) {
+                    return g(d.x); 
+                })
+                .attr("width", function(d) {
+                    return w / dataset.length;  // assumes equal time intervals
+                })
+                .attr("height", h / dataset[0].length - 1)
+                .style("fill", function(d) { return colors(d.z); });
 
         </script>
     </body>
