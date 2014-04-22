@@ -15,11 +15,16 @@
             font: 10px sans-serif;
         }
 
-        .axis path,         /* selects all path elements inside elements with class="axis" */
-        .axis line{
+        .axis path,        
+        .axis line {
             fill: none;
             stroke: #000;
             shape-rendering: crispEdges;
+        }
+
+        .axis text {
+            font-family: sans-serif;
+            font-size: 11px;
         }
 
         </style>
@@ -28,108 +33,111 @@
 
         <script type="text/javascript">
 
-            //Width and height
-            var w = 500;
-            var h = 300;
+            var numberOfPumps = 3;
 
-            var m = 1396984337000;
-            var k = 21600; 
+            // Dimensions
+            var margin = {right: 100, bottom: 20, left: 50, top: 20};
+            var w = 700 - margin.left - margin.right; // width  550
+            var h = 300 - margin.bottom - margin.top; // height 260
 
-            //Original data
-            var dataset = [
-                [
-                // layer 1 ------- y0: 0                        = 0
-                    { x: 0, y: m + 0*k, z:1 }, // bar 1
-                    { x: 1, y: m + 0*k, z:0 }, // bar 2
-                    { x: 2, y: m + 0*k, z:1 }, // bar 3
-                    { x: 3, y: m + 0*k, z:1 }, // bar 4
-                    { x: 4, y: m + 0*k, z:0 }, // bar 5
-                    { x: 5, y: m + 0*k, z:0 }  // bar 6
-                ],
-                [
-                // layer 2 -------- y0: m+0*k                   = m
-                    { x: 0, y: m + 1*k, z:0 }, 
-                    { x: 1, y: m + 1*k, z:1 }, 
-                    { x: 2, y: m + 1*k, z:1 },
-                    { x: 3, y: m + 1*k, z:0 },
-                    { x: 4, y: m + 1*k, z:1 },
-                    { x: 5, y: m + 1*k, z:0 }  
-                ],
-                [
-                // layer 3 -------- y0: m+0*k + m+1*k           = 2m + k
-                    { x: 0, y: m + 2*k, z:1 }, 
-                    { x: 1, y: m + 2*k, z:0 }, 
-                    { x: 2, y: m + 2*k, z:0 }, 
-                    { x: 3, y: m + 2*k, z:1 },
-                    { x: 4, y: m + 2*k, z:1 },
-                    { x: 5, y: m + 2*k, z:0 }  
-                ],
-                [
-                // layer 4 -------- y0: m+0*k + m+1*k + m+2*k   = 3m + 3k 
-                    { x: 0, y: m + 3*k, z:1 }, 
-                    { x: 1, y: m + 3*k, z:0 }, 
-                    { x: 2, y: m + 3*k, z:1 }, 
-                    { x: 3, y: m + 3*k, z:1 },
-                    { x: 4, y: m + 3*k, z:0 },
-                    { x: 5, y: m + 3*k, z:1 }
-                ]
-            ];
+            // Scales
+            var x = d3.time.scale()
+                .range([0, w]);
 
-            //Set up stack method
-            var stack = d3.layout.stack();
+            var y = d3.scale.linear()
+                .domain([1, 2, 3]) 
+                .range([0, h/numberOfPumps, (2*h)/numberOfPumps]);
 
-            //Data, stacked
-            stack(dataset);
-            console.log(dataset);
-
-            // now we have y0
-
-            //Set up scales
-            var f = d3.time.scale()
-                .domain([m + 0*k, m + 3*k])
-                .range([0, w - w / dataset.length]); 
-
-            /*var yRange = [];
-            for (var i in d3.range(dataset[0].length)) {
-                i*=100;
-                yRange.push(i);
-            }*/
-
-            var g = d3.scale.linear()
-                .domain([0, dataset[0].length]) // [0, 4]
-                .range([0, h]); 
-                
-            //Custom colors
             var colors = d3.scale.ordinal()
                 .domain([0, 1])
                 .range(["rgb(224, 224, 224)","rgb(0, 204, 102)"]);
+
+            // Axes
+            var xAxis = d3.svg.axis()
+                .scale(x)
+                .orient("bottom");
+
+            var yAxis = d3.svg.axis()
+                .scale(y)
+                .orient("left")
+                .ticks(2);
         
-            //Create SVG element
-            var svg = d3.select("body")
-                        .append("svg")
-                        .attr("width", w)
-                        .attr("height", h);
-    
-            // each group --> a layer
-            var groups = svg.selectAll("g")
-                .data(dataset)
-              .enter().append("g");
-    
-            // Add a rect for each data value
-            var rects = groups.selectAll("rect")
-                .data(function(d) { return d; })
-              .enter().append("rect")
-                .attr("x", function(d) {
-                    return f(d.y);
-                })
-                .attr("y", function(d) {
-                    return g(d.x); 
-                })
-                .attr("width", function(d) {
-                    return w / dataset.length;  // assumes equal time intervals
-                })
-                .attr("height", h / dataset[0].length - 1)
-                .style("fill", function(d) { return colors(d.z); });
+            // Containers
+            var svg = d3.select("body").append("svg")
+                .attr("width", w + margin.left + margin.right)   // width  700
+                .attr("height", h + margin.bottom + margin.top)  // height 300
+              .append("g")
+                .attr("transform", "translate(" + margin.left + ", " + margin.top + ")"); // (0,0) -> (50,20)
+
+            var groups = svg.selectAll("g");
+
+            function createBlocks(pumpNumber) {
+
+                d3.csv("pump" + pumpNumber.toString() + ".csv", function(error, dataset) {
+
+                    var statusBlocks = [];
+                    var thisStatusBlock = {startTime: dataset[0].time * 1000, pumpStatus: dataset[0].value};
+                    statusBlocks.push(thisStatusBlock);
+
+                    dataset.forEach(function (d) {
+                        d.time = +d.time;
+                        d.time *= 1000;
+                        if (d.value != thisStatusBlock.pumpStatus) {
+                            thisStatusBlock.duration = d.time - thisStatusBlock.startTime;
+                            // new status. new object
+                            var newStatusBlock = {};
+                            newStatusBlock.pumpStatus = d.value;
+                            newStatusBlock.startTime = d.time;
+                            // add the new status block to the array of status blocks
+                            statusBlocks.push(newStatusBlock);
+                            // reset
+                            thisStatusBlock = newStatusBlock;
+                        }
+                    });
+
+                    thisStatusBlock.duration = dataset[dataset.length - 1].time - thisStatusBlock.startTime;
+                    statusBlocks.push(thisStatusBlock);
+
+                    console.log(statusBlocks);
+
+                    renderBars(pumpNumber, statusBlocks);
+                });
+            }
+
+            function renderBars(pumpNumber, statusBlocks) {
+
+                x.domain([statusBlocks[0].startTime, statusBlocks[statusBlocks.length - 1].startTime + statusBlocks[statusBlocks.length - 1].duration]);
+                //[100000, 500000]
+
+                console.log(statusBlocks[statusBlocks.length - 1].startTime + statusBlocks[statusBlocks.length - 1].duration );
+
+                // a group for each row of data
+                var g = groups.data(statusBlocks)
+                        .enter().append("g");
+
+                // Add a rect for each block
+                g.selectAll("rect")
+                    .data(statusBlocks)
+                .enter().append("rect")
+                    .attr("x", function(d) { return x(d.startTime); })
+                    .attr("y", y(pumpNumber))
+                    .attr("width", function(d) { return x(d.startTime + d.duration) - x(d.startTime); })
+                    .attr("height", h/numberOfPumps)
+                    .style("fill", function(d) { return colors(d.pumpStatus); });
+            }
+
+            for (var i=0; i<numberOfPumps; i++) {
+                createBlocks(i+1);
+            }
+
+            svg.append("g")
+                .attr("class", "axis")
+                .attr("transform", "translate(0, " + h + ")")
+                .call(xAxis);  
+
+            svg.append("g")
+                .attr("class", "axis")
+                .call(yAxis);
 
         </script>
     </body>
