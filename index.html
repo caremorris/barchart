@@ -107,16 +107,9 @@
             function renderBars(pumpNumber, statusBlocks) {
 
                 x.domain([statusBlocks[0].startTime, statusBlocks[statusBlocks.length - 1].startTime + statusBlocks[statusBlocks.length - 1].duration]);
-                //[100000, 500000]
+                // [100000, 500000]
 
-                console.log(statusBlocks[statusBlocks.length - 1].startTime + statusBlocks[statusBlocks.length - 1].duration );
-
-                // a group for each row of data
-                var g = groups.data(statusBlocks)
-                        .enter().append("g");
-
-                // Add a rect for each block
-                g.selectAll("rect")
+                svg.append("g").selectAll("rect")
                     .data(statusBlocks)
                 .enter().append("rect")
                     .attr("x", function(d) { return x(d.startTime); })
